@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LTCG & STCG Calculator</title>
+    <title>Prop Capital Gains Calculator</title>
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
         body {
@@ -11,18 +11,14 @@
             margin: 0;
             padding: 0;
             background-color: #f9f9f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
         }
         .container {
-            background: #ffffff;
+            max-width: 600px;
+            margin: auto; /* Center container */
             padding: 20px;
+            background-color: #ffffff;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 600px;
         }
         .container h1 {
             text-align: center;
@@ -33,8 +29,13 @@
             margin: 10px 0 5px;
             font-weight: bold;
         }
-        input, select {
-            width: 100%;
+        input[type="text"],
+        input[type="tel"],
+        input[type="number"],
+        input[type="date"],
+        select,
+        textarea {
+            width: calc(100% - 22px); /* Full width minus padding/border */
             padding: 10px;
             margin-bottom: 10px;
             border: 1px solid #ddd;
@@ -42,7 +43,7 @@
         }
         button {
             width: 100%;
-            background: #4CAF50;
+            background-color: #4CAF50;
             color: white;
             border: none;
             padding: 10px;
@@ -50,19 +51,19 @@
             cursor: pointer;
         }
         button:hover {
-            background: #45a049;
+            background-color: #45a049;
         }
         .result {
             margin-top: 20px;
             padding: 10px;
-            background: #f1f1f1;
+            background-color: #f1f1f1;
             border-radius: 4px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>LTCG & STCG Calculator</h1>
+        <h1>Prop Capital Gains Calculator</h1>
         <form id="calculator-form" onsubmit="return validateForm()">
             
             <label for="name">Name</label>
@@ -82,13 +83,15 @@
             <select id="sub-type" required>
                 <!-- Sub-type options will be populated based on Property Type selection -->
                 <option value="">Select...</option>
-                <option value="1BHK">1 BHK</option>
-                <option value="2BHK">2 BHK</option>
-                <option value="3BHK">3 BHK</option>
-                <option value="Shop">Shop</option>
-                <option value="Office">Office</option>
-                <!-- Add more options as needed -->
-                <option value="Other">Other</option>
+                <!-- Residential options -->
+                <option value='1BHK'>1 BHK</option>
+                <option value='2BHK'>2 BHK</option>
+                <option value='3BHK'>3 BHK</option>
+                <!-- Commercial options -->
+                <option value='Shop'>Shop</option>
+                <option value='Office'>Office</option>
+                <!-- Other -->
+                <option value='Other'>Other</option>
             </select>
 
             <label for="building-name">Building Name</label>
@@ -159,10 +162,10 @@
         };
 
         function handleClientLoad() {
-            gapi.load('client', initClient);
-        }
+           gapi.load('client', initClient);
+       }
 
-        function initClient() {
+       function initClient() {
            gapi.client.init({
                apiKey: 'YOUR_API_KEY',
                clientId: 'YOUR_CLIENT_ID',
