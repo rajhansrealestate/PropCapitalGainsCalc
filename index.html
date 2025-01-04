@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTCG & STCG Calculator</title>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+        .container h1 {
+            text-align: center;
+            color: #333333;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LTCG & STCG Calculator</h1>
+        <form id="calculator-form" onsubmit="return validateForm()">
+            
+            <label for="name">Name</label>
+            <input type="text" id="name" required>
+
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" required pattern="[0-9]{10}" placeholder="Enter a valid phone number">
+
+            <label for="property-type">Property Type</label>
+            <select id="property-type" required onchange="updateSubTypeOptions()">
+                <option value="">Select...</option>
+                <option value="Residential">Residential</option>
+                <option value="Commercial">Commercial</option>
+            </select>
+
+            <label for="sub-type">Sub-Type</label>
+            <select id="sub-type" required>
+                <!-- Sub-type options will be populated based on Property Type selection -->
+                <option value="">Select...</option>
+                <option value="1BHK">1 BHK</option>
+                <option value="2BHK">2 BHK</option>
+                <option value="3BHK">3 BHK</option>
+                <option value="Shop">Shop</option>
+                <option value="Office">Office</option>
+                <!-- Add more options as needed -->
+                <option value="Other">Other</option>
+            </select>
+
+            <label for="building-name">Building Name</label>
+            <input type="text" id="building-name" required>
+
+            <label for="plot-no">Plot No</label>
+            <input type="text" id="plot-no" required>
+
+            <label for="sector-no">Sector No</label>
+            <input type="text" id="sector-no" required>
+
+            <label for="city">City</label>
+            <input type="text" id="city" required>
+
+            <label for="state">State</label>
+            <input type="text" id="state" required>
+
+            <label for="others">Others (if any)</label>
+            <textarea id="others" rows="3"></textarea>
+
+            <label for="purchase-price">Purchase Price (₹)</label>
+            <input type="number" id="purchase-price" required>
+
+            <label for="sale-price">Sale Price (₹)</label>
+            <input type="number" id="sale-price" required>
+
+            <label for="improvement-cost">Improvement Cost (₹)</label>
+            <input type="number" id="improvement-cost" required>
+
+            <label for="purchase-date">Purchase Date</label>
+            <input type="date" id="purchase-date" required>
+
+            <label for="sale-date">Sale Date</label>
+            <input type="date" id="sale-date" required>
+
+            <button type="submit">Calculate & Save Data</button>
+        </form>
+
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const CII = {
+			2001: 100, 
+			2002: 105, 
+			2003: 109, 
+			2004: 113, 
+			2005: 117,
+			2006: 122, 
+			2007: 129, 
+			2008: 137, 
+			2009: 148, 
+			2010: 167,
+			2011: 184, 
+			2012: 200, 
+			2013: 220, 
+			2014: 240, 
+			2015: 254,
+			2016: 264, 
+			2017: 272, 
+			2018: 280, 
+			2019: 289,
+			2020: 301,
+			2021: 317,
+			2022: 331,
+			2023: 348,
+			2024: 363 // Updated CII for FY2024-25
+        };
+
+        function handleClientLoad() {
+            gapi.load('client', initClient);
+        }
+
+        function initClient() {
+           gapi.client.init({
+               apiKey: 'YOUR_API_KEY',
+               clientId: 'YOUR_CLIENT_ID',
+               discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
+               scope: "https://www.googleapis.com/auth/spreadsheets"
+           }).then(function () {
+               const isSignedIn = gapi.auth2.getAuthInstance().isSignedIn.get();
+               if (!isSignedIn) {
+                   gapi.auth2.getAuthInstance().signIn();
+               }
+
+               document.getElementById('calculator-form').onsubmit = function(event) {
+                   event.preventDefault(); // Prevent default form submission
+                   if (validateForm()) {
+                       saveData(); // Call saveData when form is submitted
+                       calculateTax(); // Calculate tax after saving data
+                   }
+               };
+           }, function(error) {
+               console.error("Error initializing Google API client:", error);
+           });
+       }
+
+       function validateForm() {
+           const name = document.getElementById('name').value.trim();
+           const phone = document.getElementById('phone').value.trim();
+           if (!name || !phone) {
+               alert("Please fill in all mandatory fields.");
+               return false; // Prevents form submission
+           }
+           return true; // Allows form submission
+       }
+
+       function saveData() {
+           const name = document.getElementById('name').value;
+           const phone = document.getElementById('phone').value;
+           const propertyType = document.getElementById('property-type').value;
+           const subType = document.getElementById('sub-type').value; // Added sub-type
+           const buildingName = document.getElementById('building-name').value;
+           const plotNo = document.getElementById('plot-no').value;
+           const sectorNo = document.getElementById('sector-no').value;
+           const city = document.getElementById('city').value;
+           const state = document.getElementById('state').value;
+           const others = document.getElementById('others').value || ''; // Optional field
+           const purchasePrice = document.getElementById('purchase-price').value;
+           const salePrice = document.getElementById('sale-price').value;
+           const improvementCost = document.getElementById('improvement-cost').value;
+           const purchaseDate = document.getElementById('purchase-date').value;
+           const saleDate = document.getElementById('sale-date').value;
+
+           const values = [
+               [name, phone, propertyType, subType, buildingName, plotNo, sectorNo, city, state, others, purchasePrice, salePrice, improvementCost, purchaseDate, saleDate]
+           ];
+
+           const body = { values };
+
+           gapi.client.sheets.spreadsheets.values.append({
+               spreadsheetId: 'YOUR_SPREADSHEET_ID',
+               range: 'Sheet1!A1', // Adjust range as needed
+               valueInputOption: 'RAW',
+               resource: body
+           }).then((response) => {
+               console.log(`${response.result.updates.updatedCells} cells updated.`);
+               alert("Data saved successfully!");
+           }, (error) => {
+               console.error("Error saving data:", error);
+               alert("Failed to save data.");
+           });
+       }
+
+       function calculateIndexedCost(purchasePrice, purchaseYear, saleYear) {
+           if (!(purchaseYear in CII) || !(saleYear in CII)) {
+               return purchasePrice; // If years are not in CII data
+           }
+           return purchasePrice * (CII[saleYear] / CII[purchaseYear]);
+       }
+
+       function calculateTax() {
+           const propertyType = document.getElementById('property-type').value;
+           const purchasePrice = parseFloat(document.getElementById('purchase-price').value);
+           const salePrice = parseFloat(document.getElementById('sale-price').value);
+           const improvementCost = parseFloat(document.getElementById('improvement-cost').value);
+           const purchaseDate = new Date(document.getElementById('purchase-date').value);
+           const saleDate = new Date(document.getElementById('sale-date').value);
+
+           const purchaseYear = purchaseDate.getFullYear();
+           const saleYear = saleDate.getFullYear();
+           const holdingPeriod = (saleDate - purchaseDate) / (1000 * 60 * 60 *24 *365.25);
+
+           let resultDiv = document.getElementById('result');
+
+           if (holdingPeriod >2) { // Long-term capital gains (LTCG)
+               const indexedCost = calculateIndexedCost(purchasePrice, purchaseYear, saleYear);
+               const ltcg = salePrice - indexedCost - improvementCost; 
+               const tax = Math.max(0, ltcg *0.2); 
+
+               resultDiv.style.display ='block';
+               resultDiv.innerHTML = `
+                   <h3>Calculation Result</h3>
+                   <p><strong>Type:</strong> LTCG</p>
+                   <p><strong>Holding Period:</strong> ${holdingPeriod.toFixed(2)} years</p>
+                   <p><strong>Indexed Cost:</strong> ₹${indexedCost.toFixed(2)}</p>
+                   <p><strong>LTCG:</strong> ₹${ltcg.toFixed(2)}</p>
+                   <p><strong>Tax:</strong> ₹${tax.toFixed(2)}</p>`;
+           } else { // Short-term capital gains (STCG)
+               const stcg = salePrice - purchasePrice - improvementCost; 
+               const tax = Math.max(0 , stcg * (propertyType === 'Commercial' ?0.3 :0.15)); 
+
+               resultDiv.style.display ='block';
+               resultDiv.innerHTML = `
+                   <h3>Calculation Result</h3>
+                   <p><strong>Type:</strong> STCG</p>
+                   <p><strong>Holding Period:</strong> ${holdingPeriod.toFixed(2)} years</p>
+                   <p><strong>STCG:</strong> ₹${stcg.toFixed(2)}</p>
+                   <p><strong>Tax:</strong> ₹${tax.toFixed(2)}</p>`;
+           }
+       }
+
+       window.onload = handleClientLoad;
+
+       function updateSubTypeOptions() {
+          var propertyType = document.getElementById("property-type").value;  
+          var subTypeSelect = document.getElementById("sub-type");
+          subTypeSelect.innerHTML = ""; // Clear existing options
+
+          if (propertyType === "Residential") {
+              subTypeSelect.innerHTML += `<option value="">Select...</option>`;
+              subTypeSelect.innerHTML += `<option value='1BHK'>1 BHK</option>`;
+              subTypeSelect.innerHTML += `<option value='2BHK'>2 BHK</option>`;
+              subTypeSelect.innerHTML += `<option value='3BHK'>3 BHK</option>`;
+              subTypeSelect.innerHTML += `<option value='Other'>Other Residential Type</option>`;
+          } else if (propertyType === "Commercial") {
+              subTypeSelect.innerHTML += `<option value="">Select...</option>`;
+              subTypeSelect.innerHTML += `<option value='Shop'>Shop</option>`;
+              subTypeSelect.innerHTML += `<option value='Office'>Office</option>`;
+              subTypeSelect.innerHTML += `<option value='Other'>Other Commercial Type</option>`;
+          } else {
+              subTypeSelect.innerHTML += `<option value="">Select Property Type First...</option>`;
+          }
+       }
+
+    </script>
+</body>
+</html>
